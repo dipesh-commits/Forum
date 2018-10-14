@@ -8,6 +8,8 @@ use Illuminate\Support\Facades\Auth;
 use App\User;
 use App\Post;
 use App\Profile;
+use App\Friendship;
+use Illuminate\Support\Facades\DB;
 
 class ProfileController extends Controller
 {
@@ -16,8 +18,17 @@ class ProfileController extends Controller
       $posts=Post::whereuser_id($user->id);
       $profile=Profile::whereuser_id($user->id);
 
+      $followers=DB::table('friendships')
 
-      return view('users.userprofile',compact('user','posts','profile'));
+      ->join('users','users.id','friendships.requesting_user')
+      ->join('profiles','profiles.user_id','=','friendships.requesting_user')
+      ->whereStatus(1)
+      ->whererequested_user($id)->get();
+
+      $total_followers=$followers->count();
+
+
+      return view('users.userprofile',compact('user','posts','profile','total_followers'));
     }
 
     public function uploadphoto(Request $request){
@@ -69,6 +80,37 @@ class ProfileController extends Controller
 
 
 
+    }
+
+    public function findfriends(){
+      $user_id=Auth::user()->id;
+      $friends=User::where('id','!=',$user_id)->get();
+
+      return view('users.findfriends',compact('friends'));
+    }
+
+    public function follow($id){
+       Auth::user()->followfriend($id);
+      return back();
+    }
+
+    public function checkfollowers(){
+      $id=Auth::user()->id;
+        $user=User::whereid($id)->first();
+        $profile=Profile::whereuser_id($id);
+
+
+    $followers=DB::table('friendships')
+
+    ->join('users','users.id','friendships.requesting_user')
+    ->join('profiles','profiles.user_id','=','friendships.requesting_user')
+    ->whereStatus(1)
+    ->whererequested_user($id)->get();
+
+    $i=$followers->count();
+
+
+    return view('users.followers',compact('user','followers','profile','friends','i'));
     }
 
 }
